@@ -21,21 +21,21 @@
 ### Docker Compose (推荐)
 
 ```bash
-git clone https://github.com/你的用户名/droid-usage.git
-cd droid-usage
+curl -O https://raw.githubusercontent.com/qq33357486/droid-usage/master/docker-compose.yml
 docker-compose up -d
 ```
 
 ### Docker
 
 ```bash
-docker build -t droid-usage .
-docker run -d -p 8003:8003 --restart unless-stopped --name droid-usage droid-usage
+docker run -d -p 8003:8003 --restart unless-stopped --name droid-usage qq33357486/droid-usage:latest
 ```
 
 ### 本地运行
 
 ```bash
+git clone https://github.com/qq33357486/droid-usage.git
+cd droid-usage
 python server.py
 ```
 

@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   droid-usage:
-    build: .
+    image: qq33357486/droid-usage:latest
     ports:
       - "8003:8003"
     restart: unless-stopped
