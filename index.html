@@ -252,6 +252,7 @@
                             <th>初始额度</th>
                             <th>剩余额度</th>
                             <th>余额百分比</th>
+                            <th>消耗速率</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -264,12 +265,41 @@
 
     <script>
         function getApiKeys() {
-            const keys = localStorage.getItem('apiKeys');
-            return keys ? JSON.parse(keys) : [];
+            const data = localStorage.getItem('apiKeys');
+            if (!data) return [];
+            const parsed = JSON.parse(data);
+            if (parsed.length === 0) return [];
+            if (typeof parsed[0] === 'string') {
+                const migrated = parsed.map(key => ({
+                    key: key,
+                    addedTime: Date.now(),
+                    initialRemaining: null,
+                    lastQueryTime: null,
+                    lastRemaining: null,
+                    consumeRate: 0
+                }));
+                saveApiKeys(migrated);
+                return migrated;
+            }
+            return parsed;
         }
         
         function saveApiKeys(keys) {
             localStorage.setItem('apiKeys', JSON.stringify(keys));
+        }
+        
+        function getKeyData(key) {
+            const keys = getApiKeys();
+            return keys.find(k => k.key === key);
+        }
+        
+        function updateKeyData(key, updates) {
+            const keys = getApiKeys();
+            const index = keys.findIndex(k => k.key === key);
+            if (index !== -1) {
+                keys[index] = { ...keys[index], ...updates };
+                saveApiKeys(keys);
+            }
         }
         
         function addApiKey() {
@@ -282,12 +312,19 @@
             }
             
             const keys = getApiKeys();
-            if (keys.includes(key)) {
+            if (keys.some(k => k.key === key)) {
                 showMessage('该API Key已存在', 'error');
                 return;
             }
             
-            keys.push(key);
+            keys.push({
+                key: key,
+                addedTime: Date.now(),
+                initialRemaining: null,
+                lastQueryTime: null,
+                lastRemaining: null,
+                consumeRate: 0
+            });
             saveApiKeys(keys);
             input.value = '';
             showMessage('API Key添加成功', 'success');
@@ -297,7 +334,7 @@
         
         function deleteApiKey(key) {
             let keys = getApiKeys();
-            keys = keys.filter(k => k !== key);
+            keys = keys.filter(k => k.key !== key);
             saveApiKeys(keys);
             renderUsageTable();
             showMessage('API Key删除成功', 'success');
@@ -374,8 +411,8 @@
             const loadingDiv = document.getElementById('loading');
             loadingDiv.style.display = 'block';
             
-            for (const key of keys) {
-                await fetchUsage(key);
+            for (const keyData of keys) {
+                await fetchUsage(keyData.key);
             }
             
             loadingDiv.style.display = 'none';
@@ -403,12 +440,40 @@
             const remainingQuota = standardRemaining + premiumRemaining;
             const percentage = calculatePercentage(initialQuota, remainingQuota);
             
+            const keyData = getKeyData(key);
+            const now = Date.now();
+            let consumeRate = keyData ? keyData.consumeRate : 0;
+            
+            if (keyData) {
+                if (keyData.initialRemaining === null) {
+                    updateKeyData(key, {
+                        initialRemaining: remainingQuota,
+                        lastQueryTime: now,
+                        lastRemaining: remainingQuota
+                    });
+                } else if (keyData.lastRemaining !== remainingQuota) {
+                    const consumed = keyData.lastRemaining - remainingQuota;
+                    const hoursDiff = (now - keyData.lastQueryTime) / 3600000;
+                    if (hoursDiff > 0 && consumed > 0) {
+                        consumeRate = consumed / hoursDiff;
+                    }
+                    updateKeyData(key, {
+                        lastQueryTime: now,
+                        lastRemaining: remainingQuota,
+                        consumeRate: consumeRate
+                    });
+                }
+            }
+            
+            const rateDisplay = consumeRate > 0 ? formatNumber(Math.round(consumeRate)) + '/小时' : '-';
+            
             const rowHtml = `
                 <tr data-key="${key}">
                     <td>${key.substring(0, 20)}...${key.substring(key.length - 10)}</td>
                     <td>${formatNumber(initialQuota)}</td>
                     <td>${formatNumber(remainingQuota)}</td>
                     <td>${percentage}</td>
+                    <td>${rateDisplay}</td>
                     <td>
                         <div class="actions">
                             <button onclick="fetchUsage('${key}')">刷新</button>
@@ -431,7 +496,7 @@
             
             const keys = getApiKeys();
             if (keys.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">暂无API Keys，添加后将显示用量</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">暂无API Keys，添加后将显示用量</td></tr>';
             }
         }
         
