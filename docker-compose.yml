@@ -1,0 +1,7 @@
+version: '3.8'
+services:
+  droid-usage:
+    build: .
+    ports:
+      - "8003:8003"
+    restart: unless-stopped

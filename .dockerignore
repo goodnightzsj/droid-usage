@@ -1,0 +1,5 @@
+.trae/
+.git/
+.gitignore
+README.md
+deploy_centos.sh
