@@ -1,4 +1,5 @@
 FROM python:3.12-slim
+ENV PYTHONUNBUFFERED=1
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 WORKDIR /app
 COPY server.py index.html ./

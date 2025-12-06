@@ -145,11 +145,11 @@ def self_check():
         result = sock.connect_ex(('127.0.0.1', PORT))
         sock.close()
         if result == 0:
-            print(f"[自检] 端口 {PORT} 监听正常")
+            print(f"[自检] 端口 {PORT} 监听正常", flush=True)
         else:
-            print(f"[自检] 端口 {PORT} 未监听")
+            print(f"[自检] 端口 {PORT} 未监听", flush=True)
     except Exception as e:
-        print(f"[自检] 检测失败: {e}")
+        print(f"[自检] 检测失败: {e}", flush=True)
 
 def main():
     # 获取当前脚本所在目录
@@ -157,18 +157,18 @@ def main():
     os.chdir(script_dir)
     
     # 启动日志
-    print("=" * 50)
-    print(f"[启动] Python版本: {sys.version}")
-    print(f"[启动] 工作目录: {script_dir}")
-    print(f"[启动] 监听端口: {PORT}")
-    print(f"[启动] 启动时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 50)
+    print("=" * 50, flush=True)
+    print(f"[启动] Python版本: {sys.version}", flush=True)
+    print(f"[启动] 工作目录: {script_dir}", flush=True)
+    print(f"[启动] 监听端口: {PORT}", flush=True)
+    print(f"[启动] 启动时间: {time.strftime('%Y-%m-%d %H:%M:%S')}", flush=True)
+    print("=" * 50, flush=True)
     
     httpd = None
     shutdown_flag = [False]
     
     def signal_handler(signum, frame):
-        print("\n[停止] 收到停止信号...")
+        print(f"\n[停止] 收到停止信号 (signal={signum})...", flush=True)
         shutdown_flag[0] = True
     
     signal.signal(signal.SIGINT, signal_handler)
@@ -176,7 +176,7 @@ def main():
     
     try:
         httpd = ThreadedTCPServer(("", PORT), MyHTTPRequestHandler)
-        print(f"[启动] 服务器已启动，运行在 http://localhost:{PORT}")
+        print(f"[启动] 服务器已启动，运行在 http://0.0.0.0:{PORT}", flush=True)
         
         # 启动自检线程
         threading.Thread(target=self_check, daemon=True).start()
@@ -184,13 +184,13 @@ def main():
         httpd.serve_forever_with_shutdown(shutdown_flag)
         
     except Exception as e:
-        print(f"[错误] 启动服务器时出错: {e}")
+        print(f"[错误] 启动服务器时出错: {e}", flush=True)
         sys.exit(1)
     finally:
         if httpd:
-            print("[停止] 正在清理资源...")
+            print("[停止] 正在清理资源...", flush=True)
             httpd.server_close()
-            print("[停止] 服务器已停止")
+            print("[停止] 服务器已停止", flush=True)
 
 if __name__ == "__main__":
     main()
