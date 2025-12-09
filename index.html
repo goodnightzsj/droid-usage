@@ -506,23 +506,29 @@
                 // Rate calculation logic update
                 const now = Date.now();
                 if (usageData) {
-                    if (keyData.initialRemaining === null) {
-                        store.update(key, {
-                            initialRemaining: remaining,
+                    // Always update initialRemaining with the true total allowance from API
+                    // This fixes the bug where initialRemaining was set to 'remaining' erroneously
+                    // and ensures we have the latest quota info
+                    if (keyData.initialRemaining !== initial || keyData.lastRemaining !== remaining) {
+                         const updates = {
+                            initialRemaining: initial,
                             lastQueryTime: now,
                             lastRemaining: remaining
-                        });
-                    } else if (keyData.lastRemaining !== remaining) {
-                        const consumed = keyData.lastRemaining - remaining;
-                        const hoursDiff = (now - keyData.lastQueryTime) / 3600000;
-                        if (hoursDiff > 0 && consumed > 0) {
-                            rate = consumed / hoursDiff;
+                        };
+                        
+                        // Only calculate rate if we have previous history
+                        if (keyData.lastRemaining !== null && keyData.lastRemaining !== remaining) {
+                            const consumed = keyData.lastRemaining - remaining;
+                            const hoursDiff = (now - keyData.lastQueryTime) / 3600000;
+                            if (hoursDiff > 0 && consumed > 0) {
+                                updates.consumeRate = consumed / hoursDiff;
+                            }
+                        } else if (keyData.initialRemaining === null) {
+                             // First time init, just set time
+                             updates.lastQueryTime = now;
                         }
-                        store.update(key, {
-                            lastQueryTime: now,
-                            lastRemaining: remaining,
-                            consumeRate: rate
-                        });
+                        
+                        store.update(key, updates);
                     }
                 }
 
